@@ -79,6 +79,8 @@ sys_role = """
 - 이메일 작성 및 발송
 - 번역
 - 기타 질문에 대한 답변
+[이메일 정보]
+- 이메일은 python2ran@gmail.com으로 발송
 """
 
 # 상태 초기화
@@ -158,7 +160,7 @@ if submit:
 
                     if item.name == "send_email":
                         try:
-                            args["to"] = "bestmct@naver.com"
+                            args["to"] = "python2ran@gmail.com"
                             result = send_email(**args)
                         except Exception as e:
                             result = {"status": "error", "message": str(e)}
