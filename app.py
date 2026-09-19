@@ -1,7 +1,9 @@
 
-import os, base64, json, requests
+import os, json
 import streamlit as st
 from openai import OpenAI
+import smtplib
+from email.mime.text import MIMEText
 
 # 히스토리 개수 제한
 MAX_HISTORY = 10
@@ -53,19 +55,24 @@ tools = [{
 
 # 함수 만들기
 def send_email(to, subject, body):
-    s = smtplib.SMTP('smtp.gmail.com', 587)
-    s.starttls()
-    s.login(os.getenv("GMAIL_ADDRESS"), os.getenv("GMAIL_APP_PASSWORD"))
-    
-    # 본문
+    sender = os.getenv("GMAIL_ADDRESS")
+    password = os.getenv("GMAIL_APP_PASSWORD")
+
+    # 메일 구성 (본문, 제목, 발신자, 수신자)
     msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = to
 
-    # 제목
-    msg['Subject'] = subject
-
-    # 메일 보내기
-    s.sendmail(os.getenv("GMAIL_ADDRESS"), to, msg.as_string())
-    s.quit()
+    # 메일 보내기 (with 구문: 오류가 나도 연결이 닫힘)
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as s:
+            s.starttls()
+            s.login(sender, password)
+            s.sendmail(sender, to, msg.as_string())
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
 
 # 역할 지정
 sys_role = """
@@ -192,15 +199,15 @@ if submit:
             speech = client.audio.speech.create(
                 model="tts-1",
                 voice="nova",
-                input=answer
+                input=answer[:4000]    # TTS 입력 길이 제한(4096자)
             )
             audio_bytes = speech.content
 
             # 음성 출력(자동 재생)
             st.subheader("AI 음성 답변")
             st.audio(audio_bytes, format="audio/mp3", autoplay=True)
-        except:
-            st.warning("음성 생성에 실패했습니다.")
+        except Exception as e:
+            st.warning(f"음성 생성에 실패했습니다: {e}")
 
         # 텍스트 출력 (확인용)
         st.write(answer)
