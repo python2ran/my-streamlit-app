@@ -1,55 +1,46 @@
 
-import os
+import time
 import streamlit as st
-from openai import OpenAI
-
-# OpenAI 클라이언트 생성
-client = OpenAI()
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 # 페이지 설정
-st.set_page_config(page_title="한글 → 영어 번역기", page_icon="🤖")
-st.title("🤖 한글 → 영어 번역기")
-st.write("입력한 한글 문장을 자연스러운 영어로 번역합니다.")
+st.set_page_config(page_title="LLM 챗봇", page_icon="💬", layout="centered")
+st.title("💬 LLM과의 대화")
 
-# 사용자 입력(텍스트)
-korean_text = st.text_area(
-    "번역할 한글 문장을 입력하세요.",
-    height=150,
-    placeholder="예: 인공지능은 우리의 일상과 업무 방식을 빠르게 변화시키고 있습니다."
-)
+# LLM 구성
+llm = ChatOpenAI(model="gpt-4o-mini")
 
-# 번역 버튼
-if st.button("번역하기"):
+# 세션 상태 초기화
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    if not korean_text.strip():
-        st.warning("번역할 한글 문장을 입력하세요.")
-    else:
-        with st.spinner("번역 중입니다..."):
+# 기존 대화 출력
+for message in st.session_state.messages:
+    role = "user" if isinstance(message, HumanMessage) else "assistant"
+    with st.chat_message(role):
+        st.markdown(message.content)
 
-            # 시스템 역할
-            sys_role = """
-            당신은 한국어를 자연스러운 영어로 번역하는 전문 번역가입니다.
-            의미를 유지하면서 원어민이 쓰는 표현으로 번역합니다.
-            """
+# 사용자 입력
+user_input = st.chat_input("메시지를 입력하세요...")
 
-            # 프롬프트 구성
-            prompt = f"""
-            다음 문장을 영어로 번역하세요.
-            TEXT:
-            {korean_text}
-            """
+if user_input:
+    # 사용자 메시지 출력 및 저장
+    st.chat_message("user").markdown(user_input)
+    st.session_state.messages.append(HumanMessage(content=user_input))
 
-            # GPT 호출
-            response = client.responses.create(
-                model="gpt-4o-mini",
-                input=[
-                    {"role": "system", "content": sys_role},
-                    {"role": "user", "content": prompt}
-                ]
-            )
+    # 질문과 답변
+    response = llm.invoke(st.session_state.messages)
 
-            # 결과 출력
-            translated_text = response.output_text
+    # 타이핑 효과로 출력
+    with st.chat_message("assistant"):
+        response_container = st.empty()
+        full_response = ""
+        for char in response.content:
+            full_response += char
+            response_container.markdown(full_response + "▌")
+            time.sleep(0.01)
+        response_container.markdown(full_response)
 
-            st.subheader("번역 결과")
-            st.success(translated_text)
+    # 대화 기록 저장
+    st.session_state.messages.append(AIMessage(content=full_response))
