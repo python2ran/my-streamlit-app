@@ -30,7 +30,12 @@ def get_retriever():
 @st.cache_resource
 def get_chain():
     retriever = get_retriever()
-    s_msg = "당신은 주어진 규정을 기반으로 답변하는 규정 도우미입니다.\n\n[규정]\n\n{context}"
+    s_msg = """
+    1. 반드시 제공된 문서 내용(context)에 근거하여 답변하세요.
+    2. 문서에 없는 내용은 추측하지 말고 "업로드된 문서에서 확인되지 않습니다."라고 답하세요.
+    3. 답변은 간결하고 명확하게 작성하세요.
+    [문서]
+    {context}"""
     h_msg = "{input}"
     messages = [("system", s_msg), ("human", h_msg)]
     prompt = ChatPromptTemplate.from_messages(messages)
